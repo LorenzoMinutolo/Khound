@@ -1,0 +1,13 @@
+flask
+flask-admin
+flask-bootstrap
+flask-cache
+flask-login
+flask-mail
+flask-sqlalchemy
+flask-wtf
+flask_socketio
+flask_migrate
+flask_table
+flask_session
+email_validator
