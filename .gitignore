@@ -42,3 +42,5 @@ __pycache__
 *.db
 migrations
 flask_session
+/data
+/plot

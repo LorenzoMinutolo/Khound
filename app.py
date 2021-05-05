@@ -20,7 +20,7 @@ INFO = shared_var_manager.dict()
 
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-GLOBAL_MEASURES_PATH = "/home/lorenzo/Desktop/GPU_SDR/scripts/data/"
+
 SECRET_KEY = 'A4Zr348j/3yX R~XKH!1mN]LZX/,?RT'
 class Config(object):
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'reference_database.db')
@@ -32,6 +32,7 @@ class Config(object):
     APP_ADDR = "0.0.0.0"
     SESSION_TYPE = 'filesystem'
     PORT = "5000"
+    GLOBAL_MEASURES_PATH = "/home/lebicep/Documents/GPU_SDR_WEBGUI/data/"
 
 app = Flask(__name__)
 app.config.from_object(Config)

@@ -47,7 +47,7 @@
 {% endblock %}
 {% block content %}
 
-<!-- <script type="text/javascript" src={{ url_for('static', filename = 'js/index.js') }}></script> -->
+<script type="text/javascript" src={{ url_for('static', filename = 'js/index.js') }}></script>
 
 
 <!-- Side navigation -->
@@ -64,86 +64,11 @@
         <div><p>{{ session.author.username }} did: <b>{{ session.body }}</b></p></div>
         {% endfor %}
 
-        <!-- measures table -->
-        <div class="panel panel-default w-100">
-          <div class="panel-heading">Measures queue</div>
-          <div class="panel-body">
-            <table id="jobs" class="table" style="width:95%">
-              <thead>
-                  <tr>
-                    <th>Job name</th>
-                    <th>Author</th>
-                    <th>Progress</th>
-                    <th>Status</th>
-                    <th>Errors</th>
-                    <th>started</th>
-                    <th>enqueued</th>
-                  </tr>
-              </thead>
-              <tbody id = "meas_table_id">
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <!-- <div id="message_console" style="padding:20px 20px;width:100%; height:20%; overflow-x:scroll; overflow-y:scroll;">Console messages</div> -->
+        <div id="message_console" style="padding:20px 20px;width:100%;background-color: yellow;">Console messages</div>
 
 
-        <!-- jobs table -->
-        <div class="panel panel-default w-100">
-          <div class="panel-heading">
-            Analisys jobs
-            <button type="submit" value="clear_job_queue" class="clear", id="clear_job_queue_button" style="float: right;"
-            onclick="clear_terminated_jobs()" data-toggle="tooltip" title="Clear the job list from finished, failed and expired tasks">Clear terminated</button>
-          </div>
-          <div class="panel-body">
-            <table id="jobs" class="table" style="width:95%">
-              <thead>
-                  <tr>
-                      <th>Job name</th>
-                      <th>Status</th>
-                      <th>started</th>
-                      <th>enqueued</th>
-                  </tr>
-              </thead>
-              <tbody id = "job_table_id">
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-
-        <!-- workers table -->
-        <div class="panel panel-default w-100">
-          <div class="panel-heading">
-            Analisys workers <i style = "margin-left:5em">requires page refresh for correct readout</i>
-            <button type="submit" value="add_worker" class="add", id="submit_button_worker" style="float: right;">Add workers</button>
-          </div>
-          <div class="panel-body">
-                <table id="workers" class="table" style="width:95%">
-                    <thead>
-                        <tr>
-                            <th>Worker Name</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                            <th>Job</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                      {% for i in worker_range: %}
-                      <tr>
-                          <td>{{ workers['name'][i] }}</td>
-                          <td>{{ workers['status'][i] }}</td>
-                          <td>
-                              <button type="submit" value="{{ workers['name'][i] }}" class="remove", onclick="disable_worker(this)">Remove</button>
-                          </td>
-                          <td>{{ workers['job'][i] }}</td>
-                      </tr>
-                      {% endfor %}
-
-                    </tbody>
-                </table>
-          </div>
-        </div>
-
+        <button type="submit" class="btn btn-success btn-default" onclick="scan_all()"><span class="glyphicon glyphicon-on"></span> Scan all</button>
 
         <!-- Modal -->
         <div class="modal fade" id="modal_add_worker" role="dialog">
@@ -169,7 +94,6 @@
                 </form>
               </div>
               <div class="modal-footer">
-                <button type="submit" class="btn btn-success btn-default" onclick="add_worker()"><span class="glyphicon glyphicon-off"></span> Add</button>
                 <button type="submit" class="btn btn-danger btn-default" data-dismiss="modal"><span class="glyphicon glyphicon-remove"></span> Cancel</button>
               </div>
             </div>
