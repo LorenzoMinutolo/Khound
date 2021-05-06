@@ -33,7 +33,6 @@ def index():
     plot_list = sorted(glob.glob(search_string))[-1]
     with open(plot_list, "rb") as image_file_:
         encoded_string = base64.b64encode(image_file_.read()).decode("utf-8")
-    # image_file = url_for('plot', filename=)
     print("Loading: " + plot_list)
     return render_template(
         'index.html',

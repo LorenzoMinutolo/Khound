@@ -1,5 +1,5 @@
 import json
-import os
+import os,glob
 import time
 import numpy as np
 from flask_socketio import emit
@@ -9,17 +9,74 @@ from diagnostic_text import *
 # from models import add_file_selected, user_files_selected, remove_file_selected, clear_user_file_selected, add_file_source, consolidate_sources
 # from models import remove_source_group, clear_user_file_source, remove_file_source, measure_path_from_name, measure_path_response, get_associated_plots, remove_path_selected
 import datetime
-from Khound import make_spec_file, shared_dict, shared_dict_lock, meas_lock
+from Khound import make_spec_file, shared_dict, shared_dict_lock, meas_lock, file_write_lock, plot_files
 import multiprocessing
 from multiprocessing import Process, Lock, Manager, Process
 
 
-# def plot_full_spec(args):
-#     '''
-#     Plot the last <time> periodically upon new data present in data folder.
-#     '''
-#     print('Running plotter process now')
-#     plot_time = 60*30
+def get_latest_plot_tag():
+    '''
+    get the last plotted timestamp
+    '''
+    plot = sorted(glob.glob(os.path.join(app.config['PLOT_DIR'], "KHound_plot_*.png")))[-1]
+    # print(os.path.basename(plot))
+    x = os.path.basename(plot).split('.')[0].split('plot_')[1]
+    return x
+
+def plot_full_spec(args):
+    '''
+    Plot the last <time> periodically upon new data present in data folder.
+    '''
+    shared_dict = args[0]
+    file_write_lock = args[1]
+    socketio = args[2]
+    print('Running plotter process now')
+    plot_time = 60*30 # in seconds, from last file received
+    while shared_dict['plot_full_spec_enable']:
+        #get the file list
+        search_string = os.path.join(app.config['GLOBAL_MEASURES_PATH'], "Khound_*.txt")
+        # print(search_string)
+        with file_write_lock:
+            meas_list = sorted(glob.glob(search_string))
+        # print(meas_list)
+        latest_meas_tag = int(os.path.basename(meas_list[-1]).split('.')[0].split('_')[1])
+        latest_plot_tag = int(get_latest_plot_tag())
+        if latest_meas_tag!=latest_plot_tag:
+            print(latest_meas_tag)
+            print(latest_plot_tag)
+            meas_list_int = [int(os.path.basename(m).split('.')[0].split('_')[1]) for m in meas_list]
+            meas_list_base = [os.path.basename(m) for m in meas_list]
+            file_list = []
+            for m in range(len(meas_list_int)):
+                if latest_meas_tag - meas_list_int[m] < plot_time:
+                    file_list.append(meas_list_base[m])
+            file_list = sorted(file_list)
+
+            # with file_write_lock:
+            print('plotting...')
+            #processes are not PIL locked, matplotlib works way faster
+            pp = Process(target = plot_files, args = [shared_dict,file_list,'matplotlib',False,app.config['GLOBAL_MEASURES_PATH'],app.config['PLOT_DIR']])
+            pp.start()
+            pp.join()
+            print("New plot available, reloading mainpage")
+            reload_page_command(socketio)
+        else:
+            print('Nothing to plot')
+            time.sleep(1)
+
+# plot_full_spec_process = Process(target = plot_full_spec, args = [shared_dict,file_write_lock,socketio])
+shared_dict['plot_full_spec_enable'] = False
+@socketio.on('init_plotter')
+def init_plotter(msg, methods=['GET', 'POST']):
+    print('request to start plotter received')
+    # if not plot_full_spec_process.is_alive():
+    if not shared_dict['plot_full_spec_enable']:
+        print("starting plotter")
+        plot_full_spec_process = socketio.start_background_task(target = plot_full_spec, args = [shared_dict,file_write_lock,socketio])
+        shared_dict['plot_full_spec_enable'] = True
+    else:
+        print('plotter already initialized')
+
 
 def run_full_spec(args):
     '''
@@ -32,7 +89,7 @@ def run_full_spec(args):
     start_time = time.time()
     while shared_dict['full_spec_enable']:
         wait_time = np.abs(time.time()-start_time)
-        print(wait_time)
+        # print(wait_time)
         if wait_time>shared_dict['full_spec_every']:
             with meas_lock:
                 status_update('Starting scan loop', socketio)
@@ -52,13 +109,9 @@ def run_full_spec(args):
                     time.sleep(0.127)
                 status_update(shared_dict['progress'], socketio)
                 daq_thread.join()
-                if shared_dict['full_spec_enable'] == True:
-                    reload_page_command(socketio)
-
         else:
-
             with shared_dict_lock:
-                shared_dict['progress'] = "Udating in %d s" % int(shared_dict['full_spec_every'] - wait_time)
+                shared_dict['progress'] = "Updating in %d s" % int(shared_dict['full_spec_every'] - wait_time)
             status_update(shared_dict['progress'], socketio)
             time.sleep(1)
         # else:

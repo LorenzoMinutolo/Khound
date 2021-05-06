@@ -11,7 +11,7 @@ import multiprocessing
 
 shared_dict_lock = multiprocessing.Lock()
 meas_lock = multiprocessing.Lock()
-
+file_write_lock = multiprocessing.Lock()
 os.environ["UHD_IMAGES_DIR"] = "/usr/local/share/uhd/images"
 manager = multiprocessing.Manager()
 shared_dict = manager.dict()
@@ -199,7 +199,8 @@ def make_spec_file(shared_dict, usrp, master_clock_rate = 52e6, start = 30e6, en
 
     print("Writing %s on disk..." % filename)
     # print(np.c_[complete_freq,complete_spec].shape)
-    np.savetxt(filename, np.c_[complete_freq,complete_spec], header = "gain:%d;central_freqs:%s;resolution:%f" % (gain,str(span_freq),resolution))
+    with file_write_lock:
+        np.savetxt(filename, np.c_[complete_freq,complete_spec], header = "gain:%d;central_freqs:%s;resolution:%f" % (gain,str(span_freq),resolution))
     print("Spectrum saved")
     with shared_dict_lock:
         shared_dict['progress'] = 'Operations complete. %s is on disk.' % filename

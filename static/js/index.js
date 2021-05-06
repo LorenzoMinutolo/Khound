@@ -11,6 +11,14 @@ function update_console(message){
   // element.appendChild(node);
 }
 
+// called in html
+function init_plotter(){
+  console.log('Initializing plotter.')
+  out_socket.emit('init_plotter', {
+    'window_UUID':window_UUID
+  });
+}
+
 function start_full(){
   console.log('Starting full scan.')
   out_socket.emit('start_full', {
