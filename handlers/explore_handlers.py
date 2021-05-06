@@ -9,15 +9,117 @@ from diagnostic_text import *
 # from models import add_file_selected, user_files_selected, remove_file_selected, clear_user_file_selected, add_file_source, consolidate_sources
 # from models import remove_source_group, clear_user_file_source, remove_file_source, measure_path_from_name, measure_path_response, get_associated_plots, remove_path_selected
 import datetime
-from Khound import make_spec_file, shared_dict, shared_dict_lock
+from Khound import make_spec_file, shared_dict, shared_dict_lock, meas_lock
 import multiprocessing
+from multiprocessing import Process, Lock, Manager, Process
 
-def status_update(message, UUID):
+
+# def plot_full_spec(args):
+#     '''
+#     Plot the last <time> periodically upon new data present in data folder.
+#     '''
+#     print('Running plotter process now')
+#     plot_time = 60*30
+
+def run_full_spec(args):
+    '''
+    run full spec periodically
+    '''
+    shared_dict = args[0]
+    meas_lock = args[1]
+    socketio = args[2]
+    print('Running full spec process now.')
+    start_time = time.time()
+    while shared_dict['full_spec_enable']:
+        wait_time = np.abs(time.time()-start_time)
+        print(wait_time)
+        if wait_time>shared_dict['full_spec_every']:
+            with meas_lock:
+                status_update('Starting scan loop', socketio)
+                daq_thread = multiprocessing.Process(target=make_spec_file, args=(shared_dict, None,
+                    shared_dict['master_clock_rate'],
+                    shared_dict['start'],
+                    shared_dict['end'],
+                    shared_dict['gain'],
+                    shared_dict['resolution'],
+                    shared_dict['iterations'])
+                )
+                # daq_thread.daemon = True
+                daq_thread.start()
+                while daq_thread.is_alive():
+                    with shared_dict_lock:
+                        status_update(shared_dict['progress'], socketio)
+                    time.sleep(0.127)
+                status_update(shared_dict['progress'], socketio)
+                daq_thread.join()
+                if shared_dict['full_spec_enable'] == True:
+                    reload_page_command(socketio)
+
+        else:
+
+            with shared_dict_lock:
+                shared_dict['progress'] = "Udating in %d s" % int(shared_dict['full_spec_every'] - wait_time)
+            status_update(shared_dict['progress'], socketio)
+            time.sleep(1)
+        # else:
+        #     time.sleep(1)
+
+full_spec_process = Process(target = run_full_spec, args = [shared_dict,meas_lock,socketio])
+
+
+def status_update(message, socketio, UUID = None):
     message = str(message)
     if len(message) > 1024:
         print_warning("transmitting very long status update")
     msg = {'status':message}
-    socketio.emit('status_update',json.dumps(msg),namespace="/"+UUID)
+    if UUID is not None:
+        socketio.emit('status_update',json.dumps(msg),namespace="/"+UUID)
+    else:
+        socketio.emit('status_update',json.dumps(msg))
+        print("------------>sending status update")
+
+def reload_page_command(socketio, UUID = None):
+    msg = {'command':'reload'}
+    if UUID is not None:
+        socketio.emit('command',json.dumps(msg),namespace="/"+UUID)
+    else:
+        socketio.emit('command',json.dumps(msg))
+        print("------------>sending reload command")
+
+@socketio.on('start_full')
+def start_full(msg, methods=['GET', 'POST']):
+    print("starting full from window UUID: " + msg['window_UUID'])
+    window_UUID = msg['window_UUID']
+    with shared_dict_lock:
+        shared_dict['full_spec_enable'] = True
+    # full_spec_process = Process(target = run_full_spec, args = [shared_dict,meas_lock,socketio])
+    full_spec_process = socketio.start_background_task(target = run_full_spec, args = [shared_dict,meas_lock,socketio])
+    # full_spec_process.start()
+
+@socketio.on('stop_full')
+def stop_full(msg, methods=['GET', 'POST']):
+    print("stopping full from window UUID: " + msg['window_UUID'])
+    window_UUID = msg['window_UUID']
+    with shared_dict_lock:
+        shared_dict['full_spec_enable'] = False
+    while full_spec_process.is_alive():
+        status_update("stopping full_spec_thread", socketio)
+        time.sleep(0.136)
+    try:
+        full_spec_process.join()
+    except AssertionError:
+        pass
+    with shared_dict_lock:
+        time.sleep(0.0954)
+        shared_dict['progress'] = 'full_spec thread stopped'
+        status_update(shared_dict['progress'], socketio)
+
+
+@socketio.on('ping')
+def ping(msg, methods=['GET', 'POST']):
+    print("received ping from window UUID: " + msg['window_UUID'])
+    window_UUID = msg['window_UUID']
+    print(window_UUID)
 
 @socketio.on('scan_all')
 def plot_all(msg, methods=['GET', 'POST']):
@@ -31,16 +133,16 @@ def plot_all(msg, methods=['GET', 'POST']):
     gain = 30
     resolution = 10000
     iterations = 200
-    status_update('Starting scan loop', window_UUID)
-    daq_thread = multiprocessing.Process(target=make_spec_file, args=(shared_dict, None, master_clock_rate, start,end, gain, resolution, iterations))
-    # daq_thread.daemon = True
-    daq_thread.start()
-    while daq_thread.is_alive():
-        with shared_dict_lock:
-            status_update(shared_dict['progress'], window_UUID)
-        time.sleep(0.127)
-    status_update(shared_dict['progress'], window_UUID)
-    daq_thread.join()
+    # status_update('Starting scan loop', window_UUID)
+    # daq_thread = multiprocessing.Process(target=make_spec_file, args=(shared_dict, None, master_clock_rate, start,end, gain, resolution, iterations))
+    # # daq_thread.daemon = True
+    # daq_thread.start()
+    # while daq_thread.is_alive():
+    #     with shared_dict_lock:
+    #         status_update(shared_dict['progress'], window_UUID)
+    #     time.sleep(0.127)
+    # status_update(shared_dict['progress'], window_UUID)
+    # daq_thread.join()
     print('thread joined')
 
 

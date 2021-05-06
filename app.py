@@ -14,9 +14,8 @@ import os
 import time
 import numpy as np
 from multiprocessing import Process, Lock, Manager, Process
+from Khound import make_spec_file, shared_dict, shared_dict_lock, meas_lock
 
-shared_var_manager = Manager()
-INFO = shared_var_manager.dict()
 
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -32,7 +31,9 @@ class Config(object):
     APP_ADDR = "0.0.0.0"
     SESSION_TYPE = 'filesystem'
     PORT = "5000"
-    GLOBAL_MEASURES_PATH = "/home/lebicep/Documents/GPU_SDR_WEBGUI/data/"
+    GLOBAL_MEASURES_PATH = "/home/lebicep/Documents/WebKHound/data/"
+    PLOT_DIR = "/home/lebicep/Documents/WebKHound/plot/"
+    MAIN_DIR = "/home/lebicep/Documents/WebKHound"
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -53,12 +54,36 @@ from routes import *
 # This has to be imported last
 from handlers import *
 
+with shared_dict_lock:
+    shared_dict['master_clock_rate'] = 52e6
+    shared_dict['start'] = 10e6
+    shared_dict['end'] = 500e6
+    shared_dict['gain'] = 30
+    shared_dict['resolution'] = 10000
+    shared_dict['iterations'] = 200
+    shared_dict['full_spec_every'] = 3
+    shared_dict['full_spec_enable'] = True
+
+
+
 if __name__ == '__main__':
     #app.run(debug=True)
+    try:
+        os.chdir(app.config['PLOT_DIR'])
+    except OSError:
+        os.mkdir(app.config['PLOT_DIR'])
+        os.chdir(app.config['PLOT_DIR'])
+    os.chdir(app.config['MAIN_DIR'])
 
-    # measures_handler = Process(target = finished_measures_handler, args = [measure_manager.result_queue,])
-    # measures_handler.deamon = True
-    # measures_handler.start()
+    try:
+        os.chdir(app.config['GLOBAL_MEASURES_PATH'])
+    except OSError:
+        os.mkdir(app.config['GLOBAL_MEASURES_PATH'])
+        os.chdir(app.config['GLOBAL_MEASURES_PATH'])
+    os.chdir(app.config['MAIN_DIR'])
+
+    app.add_url_rule(app.config['PLOT_DIR'], endpoint='plot',
+                 view_func=app.send_static_file)
 
     print("Running application on addr: %s"%app.config['APP_ADDR'])
     socketio.run(app,host= app.config['APP_ADDR'], port = app.config['PORT']) #port 33 and sudo for running on local network?

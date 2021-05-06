@@ -29,9 +29,16 @@ def page_not_found(error):
 @app.route('/index', methods=['GET', 'POST'])
 @login_required
 def index():
+    search_string = os.path.join(app.config['PLOT_DIR'], "KHound_plot_*.png")
+    plot_list = sorted(glob.glob(search_string))[-1]
+    with open(plot_list, "rb") as image_file_:
+        encoded_string = base64.b64encode(image_file_.read()).decode("utf-8")
+    # image_file = url_for('plot', filename=)
+    print("Loading: " + plot_list)
     return render_template(
         'index.html',
-        title='Home',
+        title='Khound',
+        main_image = encoded_string
     )
 
 

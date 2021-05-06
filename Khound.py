@@ -10,6 +10,8 @@ from joblib import Parallel, delayed
 import multiprocessing
 
 shared_dict_lock = multiprocessing.Lock()
+meas_lock = multiprocessing.Lock()
+
 os.environ["UHD_IMAGES_DIR"] = "/usr/local/share/uhd/images"
 manager = multiprocessing.Manager()
 shared_dict = manager.dict()
@@ -144,46 +146,49 @@ def make_spec_file(shared_dict, usrp, master_clock_rate = 52e6, start = 30e6, en
     span_freq = generate_central_freqs(start=start,end=end,clipping = clip,master_clock_rate= master_clock_rate)
     progress = 1.
     for central_freq in span_freq:
-        with shared_dict_lock:
-            shared_dict['progress'] = 'percent: %.1f\tScanning freq %.1fMHz '% (progress/len(span_freq), central_freq/1e6)
-        if central_freq!= span_freq[0]:
-            if analysis_thread.is_alive():
-                print("waiting analysis...", end='')
-            while analysis_thread.is_alive():
-                with shared_dict_lock:
-                    shared_dict['progress'] = 'percent: %.1f\tWaiting for analysis %.1fMHz '% (progress/len(span_freq), central_freq/1e6)
-                print(".", end='')
-                time.sleep(0.1)
-            print("")
+        if shared_dict['full_spec_enable']:
             with shared_dict_lock:
-                complete_spec.append(np.array(shared_dict['power']))
-                complete_freq.append(np.array(shared_dict['freq']))
-
-        print("Acquiring data at %.2f MHz" % (central_freq/1e6))
-        err = True
-        while err:
-            samps = usrp.recv_num_samps(num_samps*iterations, central_freq, rate, channels, gain)[0]
-            if len(samps) == num_samps*iterations:
-                err = False
-            else:
-                print("DAQ Error on %s, re-acquiring..." % filename)
-        analysis_thread = multiprocessing.Process(target=calculate_spec, args=(np.array(samps)*1.,iterations,num_samps,clip,rate,central_freq*1.,shared_dict))
-        analysis_thread.start()
-
-        if central_freq== span_freq[-1]:
-            if analysis_thread.is_alive():
-                print("waiting analysis...", end='')
-            while analysis_thread.is_alive():
+                shared_dict['progress'] = 'percent: %.1f\tScanning freq %.1fMHz '% (progress/len(span_freq), central_freq/1e6)
+            if central_freq!= span_freq[0]:
+                if analysis_thread.is_alive():
+                    print("waiting analysis...", end='')
+                while analysis_thread.is_alive():
+                    with shared_dict_lock:
+                        shared_dict['progress'] = 'percent: %.1f\tWaiting for analysis %.1fMHz '% (progress/len(span_freq), central_freq/1e6)
+                    print(".", end='')
+                    time.sleep(0.1)
+                print("")
                 with shared_dict_lock:
-                    shared_dict['progress'] = 'percent: %.1f\tWaiting for analysis %.1fMHz '% (progress/len(span_freq), central_freq/1e6)
-                print(".", end='')
-                time.sleep(0.1)
-            print("")
-            with shared_dict_lock:
-                complete_spec.append(np.array(shared_dict['power']))
-                complete_freq.append(np.array(shared_dict['freq']))
+                    complete_spec.append(np.array(shared_dict['power']))
+                    complete_freq.append(np.array(shared_dict['freq']))
 
-        progress+=1
+            print("Acquiring data at %.2f MHz" % (central_freq/1e6))
+            err = True
+            while err:
+                samps = usrp.recv_num_samps(num_samps*iterations, central_freq, rate, channels, gain)[0]
+                if len(samps) == num_samps*iterations:
+                    err = False
+                else:
+                    print("DAQ Error on %s, re-acquiring..." % filename)
+            analysis_thread = multiprocessing.Process(target=calculate_spec, args=(np.array(samps)*1.,iterations,num_samps,clip,rate,central_freq*1.,shared_dict))
+            analysis_thread.start()
+
+            if central_freq== span_freq[-1]:
+                if analysis_thread.is_alive():
+                    print("waiting analysis...", end='')
+                while analysis_thread.is_alive():
+                    with shared_dict_lock:
+                        shared_dict['progress'] = 'percent: %.1f\tWaiting for analysis %.1fMHz '% (progress/len(span_freq), central_freq/1e6)
+                    print(".", end='')
+                    time.sleep(0.1)
+                print("")
+                with shared_dict_lock:
+                    complete_spec.append(np.array(shared_dict['power']))
+                    complete_freq.append(np.array(shared_dict['freq']))
+
+            progress+=1
+        else:
+            return
 
     analysis_thread.join()
     complete_spec = np.concatenate(complete_spec)

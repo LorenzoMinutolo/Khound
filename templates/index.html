@@ -59,16 +59,21 @@
 <!-- Page content -->
 <div class="main">
     <div class="content">
-        <h3 >Current user: {{ current_user.username }}</h3>
+        <!-- <h3 >Current user: {{ current_user.username }}</h3>
         {% for session in sessions %}
         <div><p>{{ session.author.username }} did: <b>{{ session.body }}</b></p></div>
-        {% endfor %}
+        {% endfor %} -->
 
         <!-- <div id="message_console" style="padding:20px 20px;width:100%; height:20%; overflow-x:scroll; overflow-y:scroll;">Console messages</div> -->
-        <div id="message_console" style="padding:20px 20px;width:100%;background-color: yellow;">Console messages</div>
+        <div id="message_console"  class="form-group" style="padding-left: 10px; padding-top: 10px; margin:10px; width:80%; height: 40px; border-radius: 25px; border: 2px solid #73AD21;">Console messages</div>
 
 
-        <button type="submit" class="btn btn-success btn-default" onclick="scan_all()"><span class="glyphicon glyphicon-on"></span> Scan all</button>
+        <button type="submit" class="btn btn-success btn-default" onclick="start_full()"><span class="glyphicon glyphicon-play"></span> start full spec</button>
+        <button type="submit" class="btn btn-danger btn-default" onclick="stop_full()"><span class="glyphicon glyphicon-off"></span> stop full spec</button>
+
+        <img src="data:image/png;base64,{{main_image}}" style = "margin:10px; width:90%; height: 80%;">
+
+
 
         <!-- Modal -->
         <div class="modal fade" id="modal_add_worker" role="dialog">
