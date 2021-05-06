@@ -44,3 +44,7 @@ migrations
 flask_session
 /data
 /plot
+/flask_session
+handlers/__pycache__
+reference_dat*
+/migrations

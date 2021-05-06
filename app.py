@@ -57,12 +57,16 @@ from handlers import *
 with shared_dict_lock:
     shared_dict['master_clock_rate'] = 52e6
     shared_dict['start'] = 10e6
-    shared_dict['end'] = 500e6
-    shared_dict['gain'] = 30
-    shared_dict['resolution'] = 10000
-    shared_dict['iterations'] = 200
-    shared_dict['full_spec_every'] = 3
+    shared_dict['end'] = 1300e6
+    shared_dict['gain'] = 50
+    shared_dict['resolution'] = 1000
+    shared_dict['iterations'] = 2000
+    shared_dict['full_spec_every'] = 60*10
     shared_dict['full_spec_enable'] = True
+    shared_dict['plot_full_spec_enable'] = False
+    shared_dict['plot_time'] = 60*60*2
+
+
 
 
 

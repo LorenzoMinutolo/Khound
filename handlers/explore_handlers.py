@@ -18,10 +18,12 @@ def get_latest_plot_tag():
     '''
     get the last plotted timestamp
     '''
-    plot = sorted(glob.glob(os.path.join(app.config['PLOT_DIR'], "KHound_plot_*.png")))[-1]
-    # print(os.path.basename(plot))
-    x = os.path.basename(plot).split('.')[0].split('plot_')[1]
-    return x
+    try:
+        plot = sorted(glob.glob(os.path.join(app.config['PLOT_DIR'], "KHound_plot_*.png")))[-1]
+        # print(os.path.basename(plot))
+    except IndexError:
+        return 0
+    return os.path.basename(plot).split('.')[0].split('plot_')[1]
 
 def plot_full_spec(args):
     '''
@@ -31,13 +33,17 @@ def plot_full_spec(args):
     file_write_lock = args[1]
     socketio = args[2]
     print('Running plotter process now')
-    plot_time = 60*30 # in seconds, from last file received
+    plot_time = shared_dict['plot_time'] # in seconds, from last file received
     while shared_dict['plot_full_spec_enable']:
         #get the file list
         search_string = os.path.join(app.config['GLOBAL_MEASURES_PATH'], "Khound_*.txt")
         # print(search_string)
         with file_write_lock:
             meas_list = sorted(glob.glob(search_string))
+        if len(meas_list) == 0:
+            print('no measures to plot')
+            time.sleep(2)
+            continue
         # print(meas_list)
         latest_meas_tag = int(os.path.basename(meas_list[-1]).split('.')[0].split('_')[1])
         latest_plot_tag = int(get_latest_plot_tag())
@@ -65,7 +71,7 @@ def plot_full_spec(args):
             time.sleep(1)
 
 # plot_full_spec_process = Process(target = plot_full_spec, args = [shared_dict,file_write_lock,socketio])
-shared_dict['plot_full_spec_enable'] = False
+
 @socketio.on('init_plotter')
 def init_plotter(msg, methods=['GET', 'POST']):
     print('request to start plotter received')
