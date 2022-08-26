@@ -36,7 +36,7 @@ def gather_followup():
     Returns a list of follow ups.
     '''
 
-def generate_central_freqs(start=10e6,end=5.95e9,clipping = 0.1,master_clock_rate= 52e6):
+def generate_central_freqs(start=10e6,end=5.95e9,clipping = 0.1,master_clock_rate= 20e6):
     '''
     Generate an array of central frequencies.
     Arguments:
@@ -112,7 +112,7 @@ def calculate_spec(samps,iterations,num_samps,clip,rate,central_freq,shared_dict
         shared_dict['freq'] = freqv
     return
 
-def make_spec_file(shared_dict, usrp, master_clock_rate = 52e6, start = 30e6, end = 5.95e9, gain = 50, resolution = 100000, iterations = 2000, write_dir = "data"):
+def make_spec_file(shared_dict, usrp, master_clock_rate = 200e6, start = 30e6, end = 5.95e9, gain = 50, resolution = 100000, iterations = 2000, write_dir = "data"):
     '''
     Acquire data from the B200, fft them and dump to disk.
     Arguments:
@@ -132,18 +132,21 @@ def make_spec_file(shared_dict, usrp, master_clock_rate = 52e6, start = 30e6, en
         os.mkdir(write_dir)
         os.chdir(write_dir)
     filename = 'Khound_%d.txt' % int(time.time())
-    rate = int(master_clock_rate)
+    rate = 20e6#int(master_clock_rate)
     channels = [int(0)]
     gain = int(gain)
-    init_args = "master_clock_rate=%.3f, type=b200" % master_clock_rate
+
+    init_args = "master_clock_rate=%.3f, type=x300, dboard_clk_rate=200e6" % master_clock_rate
+    print(init_args)
     usrp = uhd.usrp.MultiUSRP(init_args)
+
     num_samps = int(rate/float(resolution))
     print("Resolution: %.3fHz"%(resolution))
     complete_spec = []
     complete_freq = []
     clip = 0.1
     iterations = int(np.abs(iterations+1)) # one is wasted by capacitors
-    span_freq = generate_central_freqs(start=start,end=end,clipping = clip,master_clock_rate= master_clock_rate)
+    span_freq = generate_central_freqs(start=start,end=end,clipping = clip,master_clock_rate= rate)
     progress = 1.
     for central_freq in span_freq:
         if shared_dict['full_spec_enable']:
@@ -356,8 +359,8 @@ def plot_files(shared_dict, file_list, backend = 'matplotlib', auto_show = False
 
 if __name__ == "__main__":
     print("Starting KHound...")
-    master_clock_rate = 52e6
-    init_args = "master_clock_rate=%.3f, type=b200" % master_clock_rate
+    master_clock_rate = 200e6
+    init_args = "master_clock_rate=%.3f, type=x300" % master_clock_rate
     # usrp = uhd.usrp.MultiUSRP(init_args)
     # for i in range(100):
     #     make_spec_file(shared_dict, usrp, master_clock_rate = master_clock_rate,start = 10e6,end = 6e9, gain = 30, resolution = 10000, iterations = 200)
@@ -366,6 +369,5 @@ if __name__ == "__main__":
     os.chdir('..')
     plot_files(shared_dict, file_list, backend = 'matplotlib', auto_show = True)
     # multi_load("Khound_", start = 0, end = np.inf)
-
 
     print("Done!")

@@ -6,9 +6,9 @@ flask-login
 flask-mail
 flask-sqlalchemy
 flask-wtf
-python-engineio==3.13.2
-python-socketio==4.6.0
-flask_socketio==4.3.1
+python-engineio
+python-socketio
+flask_socketio
 flask_migrate
 flask_table
 flask_session

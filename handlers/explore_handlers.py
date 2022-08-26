@@ -93,10 +93,12 @@ def run_full_spec(args):
     socketio = args[2]
     print('Running full spec process now.')
     start_time = time.time()
+    first_time = True
     while shared_dict['full_spec_enable']:
         wait_time = np.abs(time.time()-start_time)
         # print(wait_time)
-        if wait_time>shared_dict['full_spec_every']:
+        if first_time or (wait_time>shared_dict['full_spec_every']):
+            first_time = False
             with meas_lock:
                 status_update('Starting scan loop', socketio)
                 daq_thread = multiprocessing.Process(target=make_spec_file, args=(shared_dict, None,
@@ -120,6 +122,7 @@ def run_full_spec(args):
                 shared_dict['progress'] = "Updating in %d s" % int(shared_dict['full_spec_every'] - wait_time)
             status_update(shared_dict['progress'], socketio)
             time.sleep(1)
+
         # else:
         #     time.sleep(1)
 
@@ -186,7 +189,7 @@ def plot_all(msg, methods=['GET', 'POST']):
     window_UUID = msg['window_UUID']
     print("Scan request received")
 
-    master_clock_rate = 52e6
+    master_clock_rate = 200e6
     start = 10e6
     end = 500e6
     gain = 30

@@ -28,12 +28,12 @@ class Config(object):
     DEBUG = False
     FLASK_APP = "Khound"
     GLOBAL_MEASURES_PATH = "."
-    APP_ADDR = "0.0.0.0"
+    APP_ADDR = "127.0.0.1"
     SESSION_TYPE = 'filesystem'
     PORT = "5000"
-    GLOBAL_MEASURES_PATH = "/home/lebicep/Documents/WebKHound/data/"
-    PLOT_DIR = "/home/lebicep/Documents/WebKHound/plot/"
-    MAIN_DIR = "/home/lebicep/Documents/WebKHound"
+    GLOBAL_MEASURES_PATH = "/home/lorenzo/Khound/data/"
+    PLOT_DIR = "/home/lorenzo/Khound/plot/"
+    MAIN_DIR = "/home/lorenzo/Khound/"
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -46,7 +46,9 @@ login = LoginManager(app)
 login.login_view = 'login'
 bootstrap = Bootstrap(app)
 socketio = SocketIO(app)
-Session(app)
+socketio.init_app(app, cors_allowed_origins="*")
+
+# Session(app)
 
 # MUST be after app init
 from routes import *
@@ -55,13 +57,13 @@ from routes import *
 from handlers import *
 
 with shared_dict_lock:
-    shared_dict['master_clock_rate'] = 52e6
+    shared_dict['master_clock_rate'] = 200e6
     shared_dict['start'] = 10e6
     shared_dict['end'] = 1300e6
     shared_dict['gain'] = 50
     shared_dict['resolution'] = 1000
     shared_dict['iterations'] = 2000
-    shared_dict['full_spec_every'] = 60*10
+    shared_dict['full_spec_every'] = 10*60
     shared_dict['full_spec_enable'] = True
     shared_dict['plot_full_spec_enable'] = False
     shared_dict['plot_time'] = 60*60*2
